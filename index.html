@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Elektrické hlásenie – 5 pacientov (kompakt) FINÁL v1.13.3</title>
+<title>Elektrické hlásenie – 5 pacientov (kompakt) FINÁL v1.13.2.1</title>
 
 <style>
   :root{
@@ -174,6 +174,11 @@
     border:1px solid var(--border);
     color:var(--muted);
   }
+
+  .aaInput{
+    border-color: color-mix(in oklab, var(--danger) 70%, var(--border)) !important;
+    background: color-mix(in oklab, var(--danger) 14%, var(--card)) !important;
+  }
 </style>
 </head>
 
@@ -182,9 +187,9 @@
   <div class="wrap">
     <div class="top">
       <div>
-        <h1>Kompaktné hlásenie (5 pacientov) FINÁL v1.13.3</h1>
+        <h1>Kompaktné hlásenie (5 pacientov) FINÁL v1.13.2.1</h1>
         <div class="subtitle">
-          dnes mal: / zajtra: • AA pod menom • NP ak prijatý dnes • Prepustený/Preložený na konci
+          dnes mal: / zajtra: • AA pod menom • NP ak prijatý dnes • Prepustený/Preložený na konci • odbery dnes/zajtra opravené
         </div>
       </div>
       <div class="btnrow">
@@ -240,7 +245,7 @@
       <span class="badge" id="leftCount">0</span>
     </div>
     <div class="content">
-      <div class="hint">Sem sa odložia pacienti po kliknutí na tlačidlo „Uložiť ako odídený“. Do tlače pôjdu na konci.</div>
+      <div class="hint">Sem sa odložia pacienti po kliknutí na tlačidlo "Uložiť ako odídený". Do tlače pôjdu na konci (prepustení nad preloženými).</div>
       <div id="leftList" style="margin-top:10px;"></div>
     </div>
   </div>
@@ -249,19 +254,23 @@
 </main>
 
 <script>
-  const STORAGE_KEY = "KOMPAKT_HLASENIE_5PAC_FINAL_V1133";
+  const STORAGE_KEY = "KOMPAKT_HLASENIE_5PAC_FINAL_V1131";
 
   function pad(n){ return String(n).padStart(2,'0'); }
+
   function todayISO(){
     const d = new Date();
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   }
+
   function isoAddDays(iso, add){
     const d = new Date(iso + "T00:00:00");
     d.setDate(d.getDate() + add);
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   }
+
   function cleanSpaces(s){ return String(s||"").replace(/\s+/g," ").trim(); }
+
   function escapeHTML(str){
     return String(str)
       .replace(/&/g,"&amp;")
@@ -270,34 +279,42 @@
       .replace(/"/g,"&quot;")
       .replace(/'/g,"&#039;");
   }
+
   function formatDateSK(iso){
     if(!iso) return "";
     const d = iso.split("-");
     return `${d[2]}.${d[1]}.${d[0]}`.trim();
   }
+
   function isTomorrow(dateISO){
     if(!dateISO) return false;
     return dateISO === isoAddDays(todayISO(), 1);
   }
+
   function isToday(dateISO){
     if(!dateISO) return false;
     return dateISO === todayISO();
   }
+
   function timeToMinutes(t){
     if(!t) return null;
     const m = String(t).match(/^(\d{1,2}):(\d{2})$/);
     if(!m) return null;
     return parseInt(m[1],10)*60 + parseInt(m[2],10);
   }
+
   function setHeaderDay(which){
     let d = todayISO();
     if(which === "tomorrow") d = isoAddDays(todayISO(),1);
     document.getElementById("handoverDay").value = d;
     save();
   }
+
   function defaultHeaderDay(){
     document.getElementById("handoverDay").value = todayISO();
   }
+
+  // ------- Rendering pacienta -------
 
   function patientTemplate(i){
     return `
@@ -313,7 +330,7 @@
       <div class="content">
 
         <div class="mini4">
-          <div><label>Izba/lôžko</label><input data-k="p${i}_bed" type="text" placeholder="4/1" /></div>
+          <div><label>Izba/lôžko</label><input data-k="p${i}_bed" type="text" placeholder="" /></div>
           <div><label>Priezvisko</label><input data-k="p${i}_surname" type="text" placeholder="Novák" /></div>
           <div><label>Meno</label><input data-k="p${i}_name" type="text" placeholder="Ján" /></div>
           <div>
@@ -331,7 +348,7 @@
         <div class="row">
           <div>
             <label>AA: (alergia)</label>
-            <input data-k="p${i}_allergy" type="text" placeholder="napr. Penicilín" />
+            <input class="aaInput" data-k="p${i}_allergy" type="text" placeholder="napr. Penicilín" />
           </div>
           <div>
             <label>Dátum prijatia</label>
@@ -380,17 +397,45 @@
               <input data-k="p${i}_note" type="text" placeholder="ďalšie info..." />
             </div>
           </div>
+
+          <div class="row">
+            <div>
+              <label>ATB</label>
+              <input data-k="p${i}_atb" type="text" placeholder="napr. Meropenem..." />
+            </div>
+            <div></div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>s.c.</label>
+              <input data-k="p${i}_sc" type="text" placeholder="napr. Fraxiparine 2x" />
+            </div>
+            <div>
+              <label>i.v.</label>
+              <input data-k="p${i}_iv_med" type="text" placeholder="napr. MgSO4 2x" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>inf.</label>
+              <input data-k="p${i}_inf" type="text" placeholder="napr. R,O,V alebo 3x" />
+            </div>
+            <div></div>
+          </div>
         </div>
 
-        <!-- ✅ i.v. vstupy -->
+        <!-- Vstupy + PK -->
         <div class="subBlock">
-          <label>i.v. vstupy (odklik → dátum)</label>
+          <label>i.v. vstupy / PK</label>
 
           <div class="checks">
             <label><input type="checkbox" data-k="p${i}_iv_chir_on" /> CHIR</label>
             <label><input type="checkbox" data-k="p${i}_iv_cvk_on" /> CVK</label>
             <label><input type="checkbox" data-k="p${i}_iv_hd_on" /> HD kaval</label>
             <label><input type="checkbox" data-k="p${i}_iv_hrd_on" /> Hr drén</label>
+            <label><input type="checkbox" data-k="p${i}_pk_on" /> PK</label>
           </div>
 
           <div class="row" style="margin-top:10px;">
@@ -437,6 +482,16 @@
               </div>
             </div>
           </div>
+
+          <div id="pk_box_${i}" class="hidden" style="margin-top:10px;">
+            <label>PK – dátum zavedenia</label>
+            <input data-k="p${i}_pk_date" type="date" />
+            <div class="inlineTools">
+              <button class="mini" onclick="setDate('p${i}_pk_date','today')">Dnes</button>
+              <button class="mini" onclick="setDate('p${i}_pk_date','yesterday')">Včera</button>
+            </div>
+          </div>
+
         </div>
 
         <div class="subBlock">
@@ -470,27 +525,6 @@
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- ✅ PK -->
-        <div class="subBlock">
-          <div class="row">
-            <div>
-              <label>PK (odklik → dátum)</label>
-              <div class="checks">
-                <label><input type="checkbox" data-k="p${i}_pk_on" /> PK</label>
-              </div>
-              <div id="pk_box_${i}" class="hidden" style="margin-top:8px;">
-                <label>Dátum zavedenia</label>
-                <input data-k="p${i}_pk_date" type="date" />
-                <div class="inlineTools">
-                  <button class="mini" onclick="setDate('p${i}_pk_date','today')">Dnes</button>
-                  <button class="mini" onclick="setDate('p${i}_pk_date','yesterday')">Včera</button>
-                </div>
-              </div>
-            </div>
-            <div class="hint">Tlač: PK 1. deň / PK 2. deň …</div>
           </div>
         </div>
 
@@ -650,7 +684,9 @@
         </div>
 
         <div class="subBlock">
-          <label>Plánované vyšetrenia (1–3)</label>
+          <label>Plánované vyšetrenia</label>
+<div class="hint">Klikni „+ Pridať vyšetrenie“</div>
+
           ${examBlock(i,1)}
           ${examBlock(i,2)}
           ${examBlock(i,3)}
@@ -682,7 +718,7 @@
             </div>
 
             <div class="hint">
-              Vyplňte, či je prepustený alebo preložený. Potom klikni hore na <b>"Uložiť ako odídený"</b> → formulár sa vymaže pre nového pacienta.
+              Vyplňte, či je prepustený alebo preložený. Keď budete mať všetko hotové, kliknite hore na tlačidlo <b>"Uložiť ako odídený"</b>. Tým sa formulár vymaže pre nového pacienta.
             </div>
           </div>
         </div>
@@ -725,6 +761,8 @@
     }
   }
 
+  // ------- Data helpers -------
+
   function getVal(k){
     const el = document.querySelector(`[data-k="${k}"]`);
     if(!el) return "";
@@ -738,6 +776,9 @@
     if(el.type === "checkbox") el.checked = !!v;
     else el.value = v ?? "";
   }
+
+  // HK state is stored in JSON as meta.hk = { "p1": [..], ... }
+  function getHKKey(i){ return `p${i}`; }
 
   function getState(){
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -804,11 +845,7 @@
   function resetAll(){
     if(!confirm("Vymazať všetko?")) return;
     localStorage.removeItem(STORAGE_KEY);
-    render();
-    document.getElementById("shiftType").value = "celodenna";
-    document.getElementById("nurseName").value = "";
-    defaultHeaderDay();
-    renderLeftList();
+    location.reload();
   }
 
   function clearPatient(i){
@@ -831,43 +868,54 @@
   }
 
   function syncPatient(i){
+    // MM box
     document.getElementById(`mm_box_${i}`)?.classList.toggle("hidden", !getVal(`p${i}_mm_on`));
-    document.getElementById(`pk_box_${i}`)?.classList.toggle("hidden", !getVal(`p${i}_pk_on`));
+    if(!getVal(`p${i}_mm_on`)){
+      setVal(`p${i}_mm_value`, "");
+    }
 
-    document.getElementById(`iv_chir_box_${i}`)?.classList.toggle("hidden", !getVal(`p${i}_iv_chir_on`));
-    document.getElementById(`iv_cvk_box_${i}`)?.classList.toggle("hidden", !getVal(`p${i}_iv_cvk_on`));
-    document.getElementById(`iv_hd_box_${i}`)?.classList.toggle("hidden", !getVal(`p${i}_iv_hd_on`));
-    document.getElementById(`iv_hrd_box_${i}`)?.classList.toggle("hidden", !getVal(`p${i}_iv_hrd_on`));
-
+    // KS date box
     const ksType = getVal(`p${i}_ks_type`);
     const needsDateBox = (ksType === "TKS" || ksType === "DKS" || ksType === "ICD" || ksType === "REVEAL");
     document.getElementById(`ks_date_box_${i}`)?.classList.toggle("hidden", !needsDateBox);
+    if(!needsDateBox){
+      setVal(`p${i}_ks_date`, "");
+    }
+
+    // IV boxes + auto clear dates
+    const chirOn = !!getVal(`p${i}_iv_chir_on`);
+    const cvkOn = !!getVal(`p${i}_iv_cvk_on`);
+    const hdOn  = !!getVal(`p${i}_iv_hd_on`);
+    const hrdOn = !!getVal(`p${i}_iv_hrd_on`);
+    const pkOn  = !!getVal(`p${i}_pk_on`);
+
+    document.getElementById(`iv_chir_box_${i}`)?.classList.toggle("hidden", !chirOn);
+    document.getElementById(`iv_cvk_box_${i}`)?.classList.toggle("hidden", !cvkOn);
+    document.getElementById(`iv_hd_box_${i}`)?.classList.toggle("hidden", !hdOn);
+    document.getElementById(`iv_hrd_box_${i}`)?.classList.toggle("hidden", !hrdOn);
+    document.getElementById(`pk_box_${i}`)?.classList.toggle("hidden", !pkOn);
+
+    if(!chirOn) setVal(`p${i}_iv_chir_date`, "");
+    if(!cvkOn) setVal(`p${i}_iv_cvk_date`, "");
+    if(!hdOn) setVal(`p${i}_iv_hd_date`, "");
+    if(!hrdOn){
+      setVal(`p${i}_iv_hrd_date`, "");
+      setVal(`p${i}_iv_hrd_out`, "");
+    }
+    if(!pkOn) setVal(`p${i}_pk_date`, "");
   }
 
   function syncAllDynamic(){
     for(let i=1;i<=5;i++) syncPatient(i);
   }
 
-  // ------- Left list (odídení) -------
+  // ------- Odídení -------
 
   function finishPatient(i){
-    const discharged = !!getVal(`p${i}_discharged`);
-    const transferred = !!getVal(`p${i}_transferred`);
-    const bed = cleanSpaces(getVal(`p${i}_bed`));
-    const surname = cleanSpaces(getVal(`p${i}_surname`));
-    const name = cleanSpaces(getVal(`p${i}_name`));
-
-    if(!(discharged || transferred)){
-      alert("Najprv označ: prepustený alebo preložený ✅");
-      return;
-    }
-    if(!(bed || surname || name)){
-      alert("Doplň aspoň lôžko alebo meno pacienta.");
-      return;
-    }
-
     const moved = moveToLeftIfMarked(i, true);
-    if(!moved) alert("Nepodarilo sa uložiť pacienta.");
+    if(!moved){
+      alert("Musíte zaškrtnúť Prepustený alebo Preložený (a mať vyplnené meno)!");
+    }
   }
 
   function moveToLeftIfMarked(i, force){
@@ -880,6 +928,7 @@
     const bed = cleanSpaces(getVal(`p${i}_bed`));
     const surname = cleanSpaces(getVal(`p${i}_surname`));
     const name = cleanSpaces(getVal(`p${i}_name`));
+
     if(!(bed || surname || name)) return false;
 
     const st = ensureState();
@@ -898,7 +947,7 @@
     };
 
     st.left.unshift(leftItem);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    /* cleared */
 
     document.querySelectorAll(`#patient_${i} [data-k]`).forEach(el=>{
       if(el.type === "checkbox") el.checked = false;
@@ -944,13 +993,11 @@
   function deleteLeft(idx){
     const st = ensureState();
     st.left.splice(idx,1);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    /* cleared */
     renderLeftList();
   }
 
   // ------- HK -------
-
-  function getHKKey(i){ return `p${i}`; }
 
   function addHK(i){
     const st = ensureState();
@@ -961,7 +1008,7 @@
       return;
     }
     st.hk[key].push({ ts: new Date().toISOString() });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    /* cleared */
     renderHKLists();
     save();
   }
@@ -970,7 +1017,7 @@
     const st = ensureState();
     const key = getHKKey(i);
     st.hk[key] = [];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    /* cleared */
     renderHKLists();
     save();
   }
@@ -982,11 +1029,12 @@
       const list = st.hk[key] || [];
       const el = document.getElementById(`hk_list_${i}`);
       if(!el) continue;
-      el.innerHTML = list.length ? `HK kliknuté: ${list.length}×` : "";
+      if(list.length === 0) el.innerHTML = "";
+      else el.innerHTML = `HK kliknuté: ${list.length}×`;
     }
   }
 
-  // ------- Print -------
+  // ------- Print composing -------
 
   function addComma(parts, piece){
     const t = cleanSpaces(piece);
@@ -1024,15 +1072,18 @@
     const lab = cleanSpaces(label);
     const d = cleanSpaces(dateISO);
     const t = cleanSpaces(timeStr);
+
     if(!lab) return "";
 
     if(d && isToday(d)){
       return `dnes mal: ${lab}`.trim();
     }
+
     if(d && isTomorrow(d)){
       if(t) return `zajtra: ${t} ${lab}`.trim();
       return `zajtra: ${lab}`.trim();
     }
+
     if(t) return `${t} ${lab}`.trim();
     return lab;
   }
@@ -1041,54 +1092,67 @@
     const n = cleanSpaces(name);
     const d = cleanSpaces(dateISO);
     const t = cleanSpaces(timeStr);
+
     if(!n) return "";
+
     const typ = obe ? "obe" : "reziduálna";
 
-    if(d && isToday(d)) return `dnes mal: hladina ${n} ${typ}`.trim();
+    if(d && isToday(d)){
+      return `dnes mal: hladina ${n} ${typ}`.trim();
+    }
+
     if(d && isTomorrow(d)){
       if(t) return `zajtra: ${t} hladina ${n} ${typ}`.trim();
       return `zajtra: hladina ${n} ${typ}`.trim();
     }
+
     if(t) return `${t} hladina ${n} ${typ}`.trim();
     return `hladina ${n} ${typ}`.trim();
   }
 
+  // ✅ OPRAVENÉ ODBERY (v1.13.2.1)
   function labsPrint(i){
-    const any = (
-      getVal(`p${i}_lab_odbery`) ||
-      getVal(`p${i}_lab_vytery`) ||
-      getVal(`p${i}_lab_moc`) ||
-      getVal(`p${i}_lab_antigeny`)
-    );
-
     const note = cleanSpaces(getVal(`p${i}_lab_note`));
     const d = cleanSpaces(getVal(`p${i}_lab_date`));
     const t = cleanSpaces(getVal(`p${i}_lab_time`));
-    if(!any && !note) return "";
 
-    const items = [];
-    if(getVal(`p${i}_lab_odbery`)) items.push("odbery");
-    if(getVal(`p${i}_lab_vytery`)) items.push("výtery");
-    if(getVal(`p${i}_lab_moc`)) items.push("moč K+C");
-    if(getVal(`p${i}_lab_antigeny`)) items.push("antigény");
+    const selected = [];
+    if(getVal(`p${i}_lab_odbery`)) selected.push("odbery");
+    if(getVal(`p${i}_lab_vytery`)) selected.push("výtery");
+    if(getVal(`p${i}_lab_moc`)) selected.push("moč K+C");
+    if(getVal(`p${i}_lab_antigeny`)) selected.push("antigény");
 
-    let base = items.join(", ");
+    if(selected.length === 0 && !note) return "";
+
+    let base = selected.join(", ");
     if(note) base = base ? `${base} ${note}` : note;
 
     const shiftType = document.getElementById("shiftType")?.value || "celodenna";
     const minutes = timeToMinutes(t);
 
+    if(!d) return base;
+
     if(shiftType === "nocna"){
-      if(d && isToday(d)){
-        if(minutes !== null && minutes >= 360) return `dnes ${base}`.trim();
-        return base;
+      if(isTomorrow(d) && minutes !== null && minutes >= 360){
+        return `dnes ${base}`.trim();
       }
-      if(d && isTomorrow(d)) return `zajtra ${base}`.trim();
+      if(isToday(d)){
+        return `dnes ${base}`.trim();
+      }
+      if(isTomorrow(d)){
+        return `zajtra ${base}`.trim();
+      }
       return base;
     }
 
-    if(d && isTomorrow(d)){
-      if(minutes !== null && minutes < 360) return `zajtra odbery nočná ${base}`.trim();
+    if(isToday(d)){
+      return `dnes ${base}`.trim();
+    }
+
+    if(isTomorrow(d)){
+      if(minutes !== null && minutes < 360){
+        return `zajtra nočná ${base}`.trim();
+      }
       return `zajtra ${base}`.trim();
     }
 
@@ -1100,8 +1164,10 @@
     const key = getHKKey(i);
     const count = (st.hk[key] || []).length;
     if(!count) return "";
+
     const obe = !!getVal(`p${i}_hk_obe`);
-    return obe ? `HK${count}xobe` : `HK${count}x`;
+    if(obe) return `HK${count}xobe`;
+    return `HK${count}x`;
   }
 
   function bloodPrint(i){
@@ -1120,12 +1186,15 @@
     if(secured > 0) line += ` zaistené ${secured}`;
 
     if(d && isTomorrow(d)){
-      line = t ? `zajtra: ${t} ${line}` : `zajtra: ${line}`;
+      if(t) line = `zajtra: ${t} ${line}`;
+      else line = `zajtra: ${line}`;
     }else if(d && isToday(d)){
-      line = t ? `dnes: ${t} ${line}` : `dnes: ${line}`;
+      if(t) line = `dnes: ${t} ${line}`;
+      else line = `dnes: ${line}`;
     }else{
       if(t) line = `${t} ${line}`;
     }
+
     return line.trim();
   }
 
@@ -1153,29 +1222,39 @@
       return a.i - b.i;
     });
 
-    return items.map(({i})=>{
+    const rows = items.map(({i})=>{
       const bed = cleanSpaces(getVal(`p${i}_bed`)) || "-";
       const fullname = cleanSpaces((getVal(`p${i}_surname`) + " " + getVal(`p${i}_name`)).trim()) || "-";
       const allergy = cleanSpaces(getVal(`p${i}_allergy`));
+
       const parts = [];
 
+      // NP ak prijatý dnes
       const admit = cleanSpaces(getVal(`p${i}_admit_date`));
       if(admit && isToday(admit)) addComma(parts, "NP");
 
+      // PR
       const pr = cleanSpaces(getVal(`p${i}_pr`));
       if(pr) addComma(parts, `"${pr}"`);
 
+      // EKG
       const ekg = cleanSpaces(getVal(`p${i}_ekg`));
       if(ekg) addComma(parts, `EKG ${ekg}`);
 
+      // monitorovať
       if(getVal(`p${i}_mon_check`)) addComma(parts, "monitorovať");
 
+      // TK (bez dvojbodky)
       const tk = cleanSpaces(getVal(`p${i}_tk`));
       if(tk) addComma(parts, `TK ${tk}`);
 
-      if(getVal(`p${i}_pv_check`)) addComma(parts, "P+V");
+      // KS
+      const ksType = cleanSpaces(getVal(`p${i}_ks_type`));
+      const ksDate = cleanSpaces(getVal(`p${i}_ks_date`));
+      const ksText = cleanSpaces(ksPrint(ksType, ksDate));
+      if(ksText) addComma(parts, ksText);
 
-      // i.v. vstupy do tlače
+      // Vstupy (CHIR/CVK/HD kaval/Hr drén)
       const ivParts = [];
       if(getVal(`p${i}_iv_chir_on`)){
         const d = cleanSpaces(getVal(`p${i}_iv_chir_date`));
@@ -1203,22 +1282,45 @@
       }
       if(ivParts.length) addComma(parts, ivParts.join(", "));
 
+      // PK
       if(getVal(`p${i}_pk_on`)){
         const d = cleanSpaces(getVal(`p${i}_pk_date`));
         const day = makeDayTextFromDate(d);
         addComma(parts, day ? `PK ${day}` : "PK");
       }
 
+      // Bilancia
+      if(getVal(`p${i}_pv_check`)) addComma(parts, "P+V");
+
+      // MM:
       if(getVal(`p${i}_mm_on`)){
         const mmv = cleanSpaces(getVal(`p${i}_mm_value`));
         if(mmv) addComma(parts, `MM: ${mmv}`);
       }
 
-      const ksType = cleanSpaces(getVal(`p${i}_ks_type`));
-      const ksDate = cleanSpaces(getVal(`p${i}_ks_date`));
-      const ksText = cleanSpaces(ksPrint(ksType, ksDate));
-      if(ksText) addComma(parts, ksText);
+      // ATB (bez hlavičky)
+      const atb = cleanSpaces(getVal(`p${i}_atb`));
+      if(atb) addComma(parts, atb);
 
+      // s.c / i.v / inf
+      const sc = cleanSpaces(getVal(`p${i}_sc`));
+      if(sc) addComma(parts, `s.c. ${sc}`);
+
+      const ivm = cleanSpaces(getVal(`p${i}_iv_med`));
+      if(ivm) addComma(parts, `i.v. ${ivm}`);
+
+      const inf = cleanSpaces(getVal(`p${i}_inf`));
+      if(inf) addComma(parts, `inf. ${inf}`);
+
+      // Odbery
+      const labs = cleanSpaces(labsPrint(i));
+      if(labs) addComma(parts, labs);
+
+      // HK
+      const hk = cleanSpaces(hkPrint(i));
+      if(hk) addComma(parts, hk);
+
+      // Hladina lieku
       const lvl = levelPrint(
         getVal(`p${i}_lvl_name`),
         getVal(`p${i}_lvl_date`),
@@ -1227,18 +1329,11 @@
       );
       if(lvl) addComma(parts, lvl);
 
-      const drugs = cleanSpaces(getVal(`p${i}_drugs`));
-      if(drugs) addComma(parts, drugs);
-
-      const labs = cleanSpaces(labsPrint(i));
-      if(labs) addComma(parts, labs);
-
-      const hk = cleanSpaces(hkPrint(i));
-      if(hk) addComma(parts, hk);
-
+      // Krvné prípravky
       const bl = cleanSpaces(bloodPrint(i));
       if(bl) addComma(parts, bl);
 
+      // Vyšetrenia 1–3
       for(let n=1;n<=3;n++){
         const ex = examPrint(
           getVal(`p${i}_exam${n}_text`),
@@ -1247,6 +1342,10 @@
         );
         if(ex) addComma(parts, ex);
       }
+
+      // plán/done/note (na koniec)
+      const drugs = cleanSpaces(getVal(`p${i}_drugs`));
+      if(drugs) addComma(parts, drugs);
 
       const planned = cleanSpaces(getVal(`p${i}_planned`));
       if(planned) addComma(parts, planned);
@@ -1257,23 +1356,28 @@
       const note = cleanSpaces(getVal(`p${i}_note`));
       if(note) addComma(parts, note);
 
-      const discharged = !!getVal(`p${i}_discharged`);
-      const transferred = !!getVal(`p${i}_transferred`);
-      const where = cleanSpaces(getVal(`p${i}_transfer_where`));
-      let endBlock = "";
-      const endLines = [];
-      if(discharged) endLines.push("prepustený");
-      if(transferred) endLines.push(`preložený: ${where || "-"}`);
-      if(endLines.length) endBlock = "\n" + endLines.join("\n");
-
-      return { bed, fullname, allergy, third: parts.join(", ") + endBlock };
+      return {
+        bed,
+        fullname,
+        allergy,
+        third: parts.join(", ")
+      };
+return { bed, fullname, allergy, third: parts.join(", ") };
     });
+
+    return rows;
   }
 
   function buildLeftRowsForPrint(){
     const st = ensureState();
     const left = st.left || [];
-    return left.map(x=>{
+
+    const discharged = left.filter(x=>!!x.end?.discharged);
+    const transferred = left.filter(x=>!!x.end?.transferred);
+
+    const sorted = [...discharged, ...transferred];
+
+    return sorted.map(x=>{
       const bed = x.bed || "-";
       const fullname = cleanSpaces(`${x.surname||""} ${x.name||""}`) || "-";
       const allergy = x.allergy || "";
@@ -1282,7 +1386,12 @@
       if(x.end?.discharged) endLines.push("prepustený");
       if(x.end?.transferred) endLines.push(`preložený: ${x.end?.where || "-"}`);
 
-      return { bed, fullname, allergy, third: endLines.join("\n") };
+      return {
+        bed,
+        fullname,
+        allergy,
+        third: endLines.join("\n")
+      };
     });
   }
 
@@ -1299,17 +1408,8 @@
     const leftRows = buildLeftRowsForPrint();
 
     let rowsHTML = "";
-    const allRows = [...activeRows, ...(leftRows.length ? [{sep:true}] : []), ...leftRows];
 
-    for(const r of allRows){
-      if(r.sep){
-        rowsHTML += `
-          <div style="margin:10px 0; border-top:2px solid #999;"></div>
-          <div style="font-size:12px; margin-bottom:6px;"><b>Odídení</b></div>
-        `;
-        continue;
-      }
-
+    for(const r of activeRows){
       rowsHTML += `
         <div class="r">
           <div class="c1">${escapeHTML(r.bed)}</div>
@@ -1317,9 +1417,29 @@
             <div class="nm">${escapeHTML(r.fullname)}</div>
             ${r.allergy ? `<div class="aa">AA: ${escapeHTML(r.allergy)}</div>` : ``}
           </div>
-          <div class="c3">${escapeHTML(r.third || "").replace(/\n/g,"<br>")}</div>
+          <div class="c3">${escapeHTML(r.third || "")}</div>
         </div>
       `;
+    }
+
+    if(leftRows.length){
+      rowsHTML += `
+        <div style="margin:10px 0; border-top:2px solid #999;"></div>
+        <div style="font-size:12px; margin-bottom:6px;"><b>Odídení</b></div>
+      `;
+
+      for(const r of leftRows){
+        rowsHTML += `
+          <div class="r">
+            <div class="c1">${escapeHTML(r.bed)}</div>
+            <div class="c2">
+              <div class="nm">${escapeHTML(r.fullname)}</div>
+              ${r.allergy ? `<div class="aa">AA: ${escapeHTML(r.allergy)}</div>` : ``}
+            </div>
+            <div class="c3">${escapeHTML(r.third || "").replace(/\n/g,"<br>")}</div>
+          </div>
+        `;
+      }
     }
 
     if(!rowsHTML){
@@ -1363,7 +1483,12 @@
         .nm{white-space:nowrap; font-weight:700;}
         .aa{font-size:12px; margin-top:2px;}
         .c3{white-space:normal; word-break:break-word;}
-      </style>
+      
+  .aaInput{
+    border-color: color-mix(in oklab, var(--danger) 70%, var(--border)) !important;
+    background: color-mix(in oklab, var(--danger) 14%, var(--card)) !important;
+  }
+</style>
       </head><body>
         <div class="head">${escapeHTML(shiftLabel)} – ${escapeHTML(dayText)}, sestra: ${escapeHTML(nurse)}</div>
         ${rowsHTML}
@@ -1391,11 +1516,28 @@
     const blob = new Blob([raw], {type:"application/json"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "Hlasenie_5pac_FINAL_v1133.json";
+    a.download = "Hlasenie_5pac_FINAL_v1131.json";
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(a.href);
+  }
+
+  function handleBloodGivenAuto(i){
+    const givenKey = `p${i}_blood_given`;
+    if(!getVal(givenKey)) return;
+
+    const readyKey = `p${i}_blood_ready`;
+    let ready = parseInt(getVal(readyKey) || "0",10) || 0;
+
+    if(ready <= 0){
+      setVal(givenKey, "");
+      return;
+    }
+
+    ready = ready - 1;
+    setVal(readyKey, String(ready));
+    setVal(givenKey, "");
   }
 
   document.addEventListener("DOMContentLoaded", ()=>{
@@ -1405,6 +1547,9 @@
 
     document.addEventListener("change", (e)=>{
       if(e.target && e.target.matches("[data-k], #handoverDay, #nurseName, #shiftType")){
+        for(let i=1;i<=5;i++){
+          handleBloodGivenAuto(i);
+        }
         syncAllDynamic();
         save();
       }
